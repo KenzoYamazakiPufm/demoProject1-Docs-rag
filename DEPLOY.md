@@ -27,9 +27,13 @@ Streamlit Cloud **没有内置登录**，本项目按你的选择**未加密码�
 ## 前置条件
 
 1. GitHub 账号
-2. 本机 Git 能推送到 GitHub —— **本机目前没有 SSH 密钥、HTTPS 也没缓存凭据**，
-   这一步需要你先解决（推荐用 GitHub 的 Personal Access Token，或 `gh auth login`）
-3. 用 GitHub 账号登录 https://share.streamlit.io
+2. **代码已推送到 GitHub** —— 本仓库：`KenzoYamazakiPufm/pkdb-resume-rag`（**私有**）
+   - 本机凭据已就绪：`gh auth login` + `gh auth setup-git`
+   - ⚠️ 提交必须用 **noreply 邮箱**，否则推送会被 GitHub 拒（GH007），见文末「已知坑」
+3. ⚠️ **私有仓库必须先授权**：用 GitHub 登录 https://share.streamlit.io 时，
+   GitHub 会询问授权范围 —— 选 **Only select repositories**，并勾上 `pkdb-resume-rag`。
+   **没授权的话，创建应用时仓库下拉框里根本看不到它**（这是私有仓库最容易卡住的一步）。
+   事后要改范围：GitHub → Settings → Applications → Authorized OAuth Apps → Streamlit
 
 ---
 
@@ -68,17 +72,25 @@ git push -u origin main
 
 ## 第 3 步：创建应用
 
-1. 打开 https://share.streamlit.io → 用 GitHub 登录
-2. 点 **Create app** → 选 **Deploy a public app from GitHub**
+1. 打开 https://share.streamlit.io → 用 GitHub 登录（**记得授权私有仓库**，见前置条件 3）
+2. 点 **Create app** → **Deploy a public app from GitHub**
 3. 填写：
-   - Repository：`<你的用户名>/<仓库名>`
-   - Branch：`main`
-   - **Main file path：`pkdb/app.py`** ← 注意在子目录里，容易填错
-   - App URL：自定一个不好猜的名字
+   - Repository：**`KenzoYamazakiPufm/pkdb-resume-rag`**（私有仓库会带一个锁图标 🔒）
+   - Branch：**`main`**
+   - **Main file path：`pkdb/app.py`** ← 在子目录里，**最容易填错的一项**
+   - App URL：自定一个**不好猜**的名字
 4. 展开 **Advanced settings**：
    - Python version 选 **3.11**（与本地一致）
    - **Secrets** 粘贴第 4 步的内容
 5. 点 **Deploy**，等 2–5 分钟
+
+### ⚠️ "私有仓库" ≠ "私有应用"（最容易误解的一点）
+
+部署出来的应用**默认是公开的** —— 任何人拿到 `https://<app-name>.streamlit.app` 都能打开。
+
+**但 Streamlit Cloud 是有访问控制的**（本文件早先写"没有内置登录"是错的）：
+部署完成后进入该应用的 **Settings**，其中有**分享 / 可见性（Sharing）**相关设置，
+可以把可见范围收窄为「只有自己」或指定邮箱白名单。
 
 ---
 
@@ -109,6 +121,12 @@ PKDB_RERANK_MODEL = "BAAI/bge-reranker-v2-m3"
 - TOML 里**值必须加引号**（连数字 `"1024"` 也建议加，本项目按字符串读）
 - 三处 Key 是同一把硅基流动 Key
 
+> 上面这份与本地 `.env` 的**当前配置一致**：对话用硅基流动的免费 `Qwen/Qwen2.5-7B-Instruct`。
+> （如果哪天把对话换成 DeepSeek，这里还要多一行 `PKDB_LLM_EXTRA_BODY`，见 README「换厂商」。）
+
+⚠️ **绝不要把 `secrets.toml` 提交到仓库** —— 只通过 Streamlit 的界面粘贴。
+仓库的 `.gitignore` 里已经忽略了 `.streamlit/secrets.toml`。
+
 保存后应用会自动重启。
 
 ---
@@ -121,6 +139,9 @@ PKDB_RERANK_MODEL = "BAAI/bge-reranker-v2-m3"
 - [ ] **没有**"向量未就绪 / 未配置 Key"的横幅
 - [ ] 右上角显示 **只读模式 · 索引随仓库提供**（而不是"重建索引"按钮）
 - [ ] 随手问一句（如"他在泰雷兹做过什么？"）能出答案 + `[1][2]` 角标 + 可展开的来源
+- [ ] 问一句 **「2017在那个公司」应能答出「泰雷兹（Thales）」** ——
+      这是**年份索引**的验收点（库里那 84 条 `chunk_years` 记录随 sqlite 一起上云，
+      少了它这个问题会答不出来）
 
 ---
 
@@ -150,3 +171,15 @@ PKDB_RERANK_MODEL = "BAAI/bge-reranker-v2-m3"
 
 > **云端不要试图改库**：容器重启会重置文件系统，改了也留不住。
 > 更新内容一律「本地 build → 提交 sqlite → 推送」。
+
+---
+
+## 已知坑（都实际踩过，别再踩）
+
+| 现象 | 原因 | 处理 |
+|---|---|---|
+| 推送被拒：`GH007 ... email privacy restrictions` | GitHub 账号开着「阻止命令行推送暴露我的邮箱」，而提交用的是该账号的**私有邮箱**；**author 与 committer 两个邮箱都会被校验** | 改用 noreply：`235839094+KenzoYamazakiPufm@users.noreply.github.com`。<br>一劳永逸且**只影响本仓库**：`git config user.email "235839094+KenzoYamazakiPufm@users.noreply.github.com"` |
+| 创建应用时**下拉框里看不到自己的仓库** | 私有仓库没被授权给 Streamlit | GitHub → Settings → Applications → Authorized OAuth Apps → Streamlit → 把该仓库加进授权范围 |
+| 提交信息里的中文变乱码 | PowerShell 向 git 传中文参数会被转码 | 把信息写进 UTF-8 文件，再 `git commit -F msg.txt` |
+| 命令"看起来成功了"其实压根没执行 | PowerShell 把 `<...>` 当**重定向符**（例如 `--pretty=format:'...<%ae>...'`），导致**整条命令解析失败** | 别在 git format 串里用 `<` `>`；**执行完必须用独立命令核验结果**，别信它的"成功"输出 |
+| `gh` 命令找不到 | PATH 未必刷新到当前 shell 会话 | 用全路径：`& 'C:\Program Files\GitHub CLI\gh.exe' ...` |
