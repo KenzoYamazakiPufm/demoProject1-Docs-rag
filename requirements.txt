@@ -1,0 +1,29 @@
+# pkdb —— 个人简历数据库 + RAG 检索原型
+# 安装：python -m pip install -r requirements.txt
+#
+# 不引入 Docker、不引入向量数据库、不引入 LangChain/LlamaIndex：
+# 数据量在千级以下时，numpy 暴力余弦检索毫秒级完成，重框架只会掩盖检索链路细节。
+
+# 读 docx（本机已装 1.2.0，这里标注版本便于复现）
+python-docx==1.2.0
+
+# 数值计算：向量存取与余弦相似度
+numpy>=1.24
+
+# 中文分词（BM25 关键词路）
+jieba>=0.42.1
+
+# BM25 打分（缺失时 pkdb 会自动退回内置等价实现）
+rank-bm25>=0.2.2
+
+# HTTP 调用云端 API
+requests>=2.28
+
+# 读取 .env（缺失时 pkdb 自动退回内置极简解析）
+python-dotenv>=1.0
+
+# 网页界面
+streamlit>=1.30
+
+# 测试
+pytest>=8.0

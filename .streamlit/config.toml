@@ -1,0 +1,19 @@
+# Streamlit 运行配置
+# 本文件不含任何密钥，可以安全提交到版本库（.env 才必须忽略）。
+
+[client]
+# 控制右上角工具栏 / 菜单里显示哪些项：
+#   "auto"(默认) 在 localhost 访问时显示开发者选项 —— 右上角那个 Deploy 就是这么冒出来的
+#   "developer"  总是显示
+#   "viewer"     隐藏开发者选项（Deploy / Rerun / Clear cache），保留主题切换等查看者功能
+#   "minimal"    只显示外部注入的选项，没有就整个隐藏菜单
+#
+# 这是本机自用 / 个人演示的工具，不需要"一键部署到 Streamlit Cloud"，所以用 viewer。
+toolbarMode = "viewer"
+
+[theme]
+# pkdb 的界面本来就是深色设计（自定义 CSS 见 pkdb/app.py）。
+# 这里显式声明深色主题，避免用户浏览器是浅色偏好时，
+# Streamlit 自带控件用深色文字落在深色背景上导致看不清。
+base = "dark"
+primaryColor = "#3ddad7"
