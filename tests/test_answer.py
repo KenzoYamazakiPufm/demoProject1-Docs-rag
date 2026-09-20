@@ -117,12 +117,15 @@ def test_prompt_contains_only_retrieved_chunks(conn):
 
 def test_system_prompt_forbids_fabrication():
     assert "禁止" in answer_mod.SYSTEM_PROMPT
-    assert "参考片段" in answer_mod.SYSTEM_PROMPT
+    assert "简历里没有写到这部分" in answer_mod.SYSTEM_PROMPT
 
 
 def test_no_answer_detection():
     """区分"模型拒答"与"本地没召回"——这正是用户看到"未找到 + 命中3段"并排时的困惑源。"""
     assert answer_mod.looks_like_no_answer("未找到相关内容。")
+    # 新话术：模型被要求使用的标准拒答说法
+    assert answer_mod.looks_like_no_answer("简历里没有写到这部分。")
+    # 旧话术兜底：7B 模型未必严格照做，旧标记必须继续有效
     assert answer_mod.looks_like_no_answer("参考片段中没有相关信息。片段里写的是……")
     assert not answer_mod.looks_like_no_answer("他在泰雷兹搭建并维护了 CI 环境[1]。")
     assert not answer_mod.looks_like_no_answer("")
@@ -131,10 +134,37 @@ def test_no_answer_detection():
 def test_answer_flags_no_answer_without_losing_hits(conn):
     """模型拒答时，仍然要保留命中的片段与来源，方便用户自己核对。"""
     _seed(conn)
-    llm = FakeLLM(reply="参考片段中没有相关信息。")
+    llm = FakeLLM(reply="简历里没有写到这部分。")
     result = _ask(conn, "自动化测试框架", llm=llm)
 
     assert result.no_answer is True
     assert result.degraded is False
     assert result.hits and result.citations, "拒答也不能把来源丢掉"
     assert result.text != answer_mod.NO_MATCH_TEXT, "这不是『没召回』，两者必须可区分"
+
+
+def test_system_prompt_has_no_internal_labels():
+    """防的是线上真实出现的一幕：问「微软做了哪些工作？」，回答开头是
+    「根据提供的《参考片段》，微软相关的项目包括：」——
+    模型照抄了提示词里的材料标题，把内部术语漏到了用户眼前。
+
+    「参考片段」这类书名号标签是写给模型看的内部结构，不得再出现在提示词里。
+    """
+    prompt = answer_mod.SYSTEM_PROMPT
+    assert "参考片段" not in prompt, "内部标签不得出现在提示词里"
+    assert "《结构化任职记录》" not in prompt, "另一个内部标签同样不得出现"
+    assert "简历里没有写到这部分" in prompt, "拒答话术必须是用户指定的那一句"
+
+
+def test_user_prompt_has_no_internal_labels(conn):
+    """同上，但盯的是材料标题本体 —— 模型是照抄它才会说出《参考片段》。"""
+    _seed(conn)
+    hits = retrieve.search(
+        conn, "自动化测试框架", mode="keyword", top_k=3, use_rerank=False
+    )
+    assert hits
+    citations = answer_mod._citations(conn, hits)
+    prompt = answer_mod.build_user_prompt(conn, "自动化测试框架", hits, citations)
+
+    assert "参考片段" not in prompt, "材料标题必须自然化，否则模型仍会照抄"
+    assert "他的简历" in prompt, "应当改用自然说法指代材料"

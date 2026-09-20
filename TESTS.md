@@ -124,9 +124,11 @@ python -m pytest tests/test_years.py -q   # 只跑某一个文件
 | `test_no_recall_returns_fixed_text_without_calling_llm` | 问「量子纠缠实验数据」 | 回固定话术，且**一次都不调大模型** |
 | `test_prompt_contains_only_retrieved_chunks` | 库里有段无关内容（"年会司仪"） | 提示词里**一个字都不许出现** |
 | `test_answer_always_carries_citations` | 正常提问 | 引用数与命中数**相等**，且含文件名/板块/段落区间 |
-| `test_system_prompt_forbids_fabrication` | 读 `SYSTEM_PROMPT` | 必须含"禁止"与"参考片段" |
+| `test_system_prompt_forbids_fabrication` | 读 `SYSTEM_PROMPT` | 必须含"禁止"，且拒答话术为**新话术**「简历里没有写到这部分」 |
 | `test_no_answer_detection` | 各种拒答话术 | 能区分**「模型拒答」**与**「本地没召回」** |
 | `test_answer_flags_no_answer_without_losing_hits` | 模型拒答 | 仍要**保留命中的片段与来源**供人核对 |
+| `test_system_prompt_has_no_internal_labels` | 读 `SYSTEM_PROMPT` | **不得**再出现「参考片段」/《结构化任职记录》这类内部标签；拒答话术必须是新话术 |
+| `test_user_prompt_has_no_internal_labels` | 组装提示词 | 材料标题已自然化为「他的简历内容」，**不再有**「参考片段」 |
 
 ---
 
@@ -199,7 +201,7 @@ python -m pytest tests/test_years.py -q   # 只跑某一个文件
 | `test_structured_evidence_is_silent_without_year` | 问「他做过自动化测试吗」 | 返回**空串** |
 | `test_structured_evidence_refuses_when_nothing_covers` | 问「1998年他在哪家公司」 | 返回**空**，不给错的 |
 | `test_structured_evidence_dedups_by_question_language` | 同一单位在 CN / EN 各存一条 | 问中文**只报中文那条**，不把两种语言报四遍 |
-| `test_prompt_carries_structured_evidence_and_says_to_trust_it` | 组装提示词 | 必含《结构化任职记录》与泰雷兹；`SYSTEM_PROMPT` 必含"必须直接采用" |
+| `test_prompt_carries_structured_evidence_and_says_to_trust_it` | 组装提示词 | 必含自然化的「任职记录」表述与泰雷兹，且**不得**再出现《结构化任职记录》标签；`SYSTEM_PROMPT` 必含"必须直接采用" |
 | `test_ask_passes_structured_evidence_to_the_model` | 假 LLM 记录提示词 | 算好的结论**真的进了提示词** |
 
 ### 关于 `test_year_channel_must_outweigh_a_wrong_consensus`

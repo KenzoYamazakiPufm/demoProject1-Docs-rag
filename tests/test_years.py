@@ -279,7 +279,8 @@ def test_prompt_carries_structured_evidence_and_says_to_trust_it(conn):
     prompt = answer.build_user_prompt(conn, "2017在那个公司", hits,
                                       citations, structured)
 
-    assert "结构化任职记录" in prompt
+    assert "任职记录" in prompt
+    assert "结构化任职记录" not in prompt, "书名号标签已改为自然表述"
     assert "泰雷兹" in prompt
     assert "必须直接采用" in answer.SYSTEM_PROMPT
 
@@ -301,7 +302,7 @@ def test_ask_passes_structured_evidence_to_the_model(conn):
                         use_rerank=False, llm=llm)
 
     assert len(llm.prompts) == 1
-    assert "结构化任职记录" in llm.prompts[0], "算好的结论必须进提示词"
+    assert "任职记录" in llm.prompts[0], "算好的结论必须进提示词"
     assert "泰雷兹" in llm.prompts[0]
     assert result.degraded is False
     assert result.text.startswith("2017")
