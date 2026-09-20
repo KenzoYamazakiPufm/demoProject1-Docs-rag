@@ -54,7 +54,7 @@ def test_app_shows_no_readiness_warning_when_ready():
     coverage = db.vector_coverage(conn)
     conn.close()
 
-    if not (coverage["ready"] and config.LLM_API_KEY):
+    if not (coverage["ready"] and config.LLM_API_KEY and config.EMBED_API_KEY):
         pytest.skip("当前环境（向量或 Key）尚未就绪，跳过")
 
     app = _run()
@@ -62,6 +62,35 @@ def test_app_shows_no_readiness_warning_when_ready():
     warnings = [item.value for item in app.info
                 if "未就绪" in item.value or "未配置" in item.value]
     assert not warnings, "已就绪却仍显示告警：%s" % warnings
+
+
+def test_app_warns_when_embed_key_missing_even_if_vectors_exist(monkeypatch):
+    """回归用例：**文档向量预存在库里**时，"向量就绪"掩盖不了"查询向量算不出来"。
+
+    这正是云端部署的形态 —— 库文件里自带文档向量（所以 `vector_coverage` 判"就绪"），
+    但每次提问仍要用 embedding Key 现算"问题的向量"。少了它，界面显示一切就绪、
+    横幅也不报错，语义检索却已经静默失效、只剩关键词。
+
+    所以 embedding Key 必须**独立**检查，不能挂在 `embed_ready` 下面。
+    """
+    from pkdb import config, db
+
+    if not os.path.isfile(config.DB_PATH):
+        pytest.skip("尚未建库，跳过")
+    conn = db.open_db()
+    ready = db.vector_coverage(conn)["ready"]
+    conn.close()
+    if not ready:
+        pytest.skip("库里向量未齐，本用例前提不成立")
+
+    monkeypatch.setattr(config, "EMBED_API_KEY", "", raising=False)
+    monkeypatch.setattr(config, "LLM_API_KEY", "fake-key", raising=False)
+
+    app = _run()
+    assert not app.exception
+    messages = [item.value for item in app.info]
+    assert any("向量化 Key" in msg for msg in messages), \
+        "向量已预存时，也必须独立检查 embedding Key（否则会静默丢掉语义检索）"
 
 
 def test_app_has_no_structured_filter_section():

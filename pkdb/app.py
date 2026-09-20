@@ -173,6 +173,18 @@ def render():
     embed_ready = coverage["ready"]
     llm_ready = bool(config.LLM_API_KEY)
 
+    # ⚠️ 云端最容易漏的一点：**文档向量是预存在库文件里的**，所以"向量就绪"
+    # 只说明"库里有向量"，**不代表"查询时能算向量"**——后者需要 embedding Key。
+    # 少了它，界面一片"就绪"、横幅也不报错，但语义检索其实已经失效（只剩关键词）。
+    # 所以这里必须**独立**检查 Key，不能挂在 embed_ready 下面。
+    embed_key_ok = bool(config.EMBED_API_KEY)
+    if embed_ready and embed_key_ok:
+        vector_state = "就绪"
+    elif embed_ready:
+        vector_state = "缺 Key"      # 有向量但算不了查询向量 —— 最隐蔽的形态
+    else:
+        vector_state = "未建"
+
     # ---------- 顶部栏
     left, right = st.columns([3, 2])
     with left:
@@ -187,7 +199,7 @@ def render():
             '<span class="pk-badge">模型 <b>%s</b></span>'
             '</div></div>'
             % (info["documents"], info["leaf_chunks"], info["profile_entries"],
-               "就绪" if embed_ready else "未建",
+               vector_state,
                config.LLM_MODEL if llm_ready else "未配置"),
             unsafe_allow_html=True,
         )
@@ -213,21 +225,22 @@ def render():
 
     lang_map = {"全部": None, "中文": "zh", "英文": "en"}
 
-    if not embed_ready or not llm_ready:
+    if not embed_ready or not llm_ready or not embed_key_ok:
         missing = []
-        if not embed_ready:
-            if config.EMBED_API_KEY:
-                # Key 是好的，只是向量还没算完 —— 别让人再去翻 .env
-                missing.append(
-                    "向量未就绪（语义检索不可用，检索会退化为关键词）"
-                    "　→　在终端执行 `python -m pkdb.cli build` 补齐向量即可")
-            else:
-                missing.append(
-                    "未配置向量化 Key（语义检索不可用，检索会退化为关键词）"
-                    "　→　把 `.env.example` 复制为 `.env` 并填好 Key，再执行 build")
+        if not embed_key_ok:
+            # 放在最前面：云端就是这个形态，而且最难自己发现
+            missing.append(
+                "未配置向量化 Key（语义检索不可用，只剩关键词匹配）"
+                "　→　在该应用的 Settings → Secrets 里配好 PKDB_EMBED_API_KEY")
+        elif not embed_ready:
+            # Key 是好的，只是向量还没算完 —— 别让人再去翻 .env
+            missing.append(
+                "向量未就绪（语义检索不可用，检索会退化为关键词）"
+                "　→　在终端执行 `python -m pkdb.cli build` 补齐向量即可")
         if not llm_ready:
             missing.append(
-                "未配置对话模型 Key（问答会退化为片段罗列）")
+                "未配置对话模型 Key（问答会退化为片段罗列）"
+                "　→　在该应用的 Settings → Secrets 里配好 PKDB_LLM_API_KEY")
         st.info(" · ".join(missing))
 
     # ---------- 查询区
