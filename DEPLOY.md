@@ -27,11 +27,11 @@ Streamlit Cloud **没有内置登录**，本项目按你的选择**未加密码�
 ## 前置条件
 
 1. GitHub 账号
-2. **代码已推送到 GitHub** —— 本仓库：`KenzoYamazakiPufm/pkdb-resume-rag`（**私有**）
+2. **代码已推送到 GitHub** —— 本仓库：`KenzoYamazakiPufm/demoProject1-Docs-rag`（**私有**）
    - 本机凭据已就绪：`gh auth login` + `gh auth setup-git`
    - ⚠️ 提交必须用 **noreply 邮箱**，否则推送会被 GitHub 拒（GH007），见文末「已知坑」
 3. ⚠️ **私有仓库必须先授权**：用 GitHub 登录 https://share.streamlit.io 时，
-   GitHub 会询问授权范围 —— 选 **Only select repositories**，并勾上 `pkdb-resume-rag`。
+   GitHub 会询问授权范围 —— 选 **Only select repositories**，并勾上 `demoProject1-Docs-rag`。
    **没授权的话，创建应用时仓库下拉框里根本看不到它**（这是私有仓库最容易卡住的一步）。
    事后要改范围：GitHub → Settings → Applications → Authorized OAuth Apps → Streamlit
 
@@ -75,7 +75,7 @@ git push -u origin main
 1. 打开 https://share.streamlit.io → 用 GitHub 登录（**记得授权私有仓库**，见前置条件 3）
 2. 点 **Create app** → **Deploy a public app from GitHub**
 3. 填写：
-   - Repository：**`KenzoYamazakiPufm/pkdb-resume-rag`**（私有仓库会带一个锁图标 🔒）
+   - Repository：**`KenzoYamazakiPufm/demoProject1-Docs-rag`**（私有仓库会带一个锁图标 🔒）
    - Branch：**`main`**
    - **Main file path：`pkdb/app.py`** ← 在子目录里，**最容易填错的一项**
    - App URL：自定一个**不好猜**的名字
