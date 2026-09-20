@@ -136,22 +136,6 @@ def _highlight(text: str, query: str) -> str:
     return escaped.replace("\n", "<br>")
 
 
-def _rebuild():
-    from pkdb import cli
-
-    # 云端没有数据源，重建无从下手（正常情况下按钮也不会显示）
-    if not config.source_available():
-        st.warning("找不到数据源目录，无法重建索引。%s" % config.SRC_DIR)
-        return 1
-    try:
-        return cli.main(["build"])
-    except SystemExit as exc:
-        return int(exc.code or 0)
-    except Exception as exc:  # 重建失败不该把页面搞崩
-        st.error("重建索引失败：%s" % exc)
-        return 1
-
-
 # --------------------------------------------------------------- 页面
 
 def render():
@@ -203,25 +187,13 @@ def render():
                config.LLM_MODEL if llm_ready else "未配置"),
             unsafe_allow_html=True,
         )
-    # 数据源可用才给"重建索引"入口：云端部署时数据源不存在是正常状态
-    source_ready = config.source_available()
     with right:
         st.write("")
-        col_a, col_b = st.columns([1, 1])
+        # 语言选择。右半边留空，保持与上方徽标一致的列宽（布局不变）。
+        col_a, _ = st.columns([1, 1])
         with col_a:
             lang = st.selectbox("语言", ["全部", "中文", "英文"], index=0,
                                 label_visibility="collapsed")
-        with col_b:
-            if source_ready:
-                if st.button("重建索引", use_container_width=True):
-                    with st.spinner("正在解析 / 切分 / 向量化…"):
-                        _rebuild()
-                    _connect.clear()
-                    st.rerun()
-            else:
-                st.markdown(
-                    '<div class="pk-badge">只读模式 · 索引随仓库提供</div>',
-                    unsafe_allow_html=True)
 
     lang_map = {"全部": None, "中文": "zh", "英文": "en"}
 
